@@ -8,24 +8,16 @@
 #include <fstream>
 #include <math.h>
 #include <stdio.h>
+// include <boost/random.h>
 using namespace std;
 class Solver{
 public:
-	Solver(double dd = 0.5, size_t iter = 100, double be = 0.8,double lamb = 0.0001): alpha(dd), MaxIter(iter),iter_num(1), beta(be),lambda(lamb)
-	{	
+	Solver(double dd = 0.5, size_t iter = 100, double be = 0.8,double lamb = 0.0001): alpha(dd), \
+		MaxIter(iter),iter_num(1), beta(be),lambda(lamb) {	
 		gradToler = 1e-10; // grad norm bound
 		toler = 1e-10; // linesearch toler: cost_cur - cost_prev
 		fprintf(stdout,"alpha:%lf, MaxIter:%d, beta:%lf, lambda:%lf\n",alpha,MaxIter,beta,lambda);
 	}
-    ~Solver(){
-        delete []bm_cur;
-        delete []bm_prev;
-        delete []weight_solver;
-        delete []grad_solver;
-        delete model;
-        fprintf(stdout, "Goodbye cruel world\n");
-    }
-
 	void init_mnist_train(const std::string data_path, const std::string label_path){
 		size_t num_sample = 60000;
 		size_t num_feature = 784;
@@ -130,7 +122,6 @@ public:
 
 	}
 
-
 	inline int predict(const std:: vector<double> row_sample){
 		return model->predict(row_sample,weight_model);
 	}
@@ -140,13 +131,10 @@ public:
 		double cor = 0;
 		for(size_t i = 0; i < x_.size(); i++){
 			y_predict = predict(x_[i]);
-          //  cout<<y_predict<<" ";
 			if(y_predict == y_[i]){
 				cor++;
-
 			}
 		}
-        //cout<<endl;
 		return cor/y_.size();
 	}
 
@@ -290,6 +278,14 @@ public:
 		return y_;
 	}
 
+	~Solver(){
+		delete []bm_cur;
+        delete []bm_prev;
+        delete []weight_solver;
+        delete []grad_solver;
+        delete model;
+        fprintf(stdout, "Goodbye cruel world\n");
+    }
 
 private:
 	Softmax* model;
