@@ -8,7 +8,7 @@
 #include <fstream>
 #include <math.h>
 #include <stdio.h>
-
+using namespace std;
 class Solver{
 public:
 	Solver(double dd = 0.5, size_t iter = 100, double be = 0.8,double lamb = 0.0001): alpha(dd), MaxIter(iter),iter_num(1), beta(be),lambda(lamb)
@@ -27,7 +27,6 @@ public:
     }
 
 	void init_mnist_train(const std::string data_path, const std::string label_path){
-        
 		size_t num_sample = 60000;
 		size_t num_feature = 784;
 		size_t num_label = 10;
@@ -41,9 +40,9 @@ public:
         if(data_in.is_open() && label_in.is_open()){
             fprintf(stdout, "open ok\n");
         }
-
         double tmp_1;
         int tmp_2;
+        
 		for(size_t i = 0; i < num_sample; i++){
 			for(size_t j = 0; j < num_feature; j++){
                 data_in>>tmp_1;
@@ -53,13 +52,10 @@ public:
             y_[i] = tmp_2;
 		}
         ndim = num_feature * num_label + num_label;
-        
-
 		data_in.close();
 		label_in.close();
         
         // 归一化
-		//ndim = num_feature * num_label + num_label;
         for (size_t i = 0; i < num_sample; i++) {
             for(size_t j = 0; j < num_feature; j++){
                 x_[i][j] = x_[i][j] / 255.0;
@@ -95,7 +91,6 @@ public:
 		Ym.resize(ndim,0);
 		p.resize(ndim,0);
         this->model = new Softmax(num_feature,num_label,lambda);
-		
 	}
 
 	void init_mnist_test(const std::string data_path, const std:: string label_path){
@@ -113,7 +108,6 @@ public:
         if(data_in.is_open() && label_in.is_open()){
             fprintf(stdout, "open ok\n");
         }
-        
         double tmp_1;
         int tmp_2;
         for(size_t i = 0; i < num_sample; i++){
@@ -162,11 +156,8 @@ public:
 		double* V = new double[ndim*ndim];
         std:: vector<double> yb(ndim,0);
         std:: vector<double> by(ndim,0);
-
 		model->cal_grad(x_,y_,weight_model,grad_model);
-        
 		while(iter--){
-
 			if(!backtraking()){
 				return;
 			}
@@ -178,8 +169,6 @@ public:
 			}
 			
 			memcpy(weight_model,weight_solver,sizeof(double)*ndim);
-
-			
 			model->cal_grad(x_,y_,weight_model,grad_solver);
 			double err = model->cal_grad_norm(grad_solver) / ndim;
 			if(err <= gradToler){
@@ -191,7 +180,6 @@ public:
 			for(size_t i = 0; i < y_.size(); ++i){
 				Ym[i] = grad_solver[i] - grad_model[i];
 			}
-
 			memcpy(grad_model,grad_solver,sizeof(double)*ndim);
 			memcpy(bm_prev,bm_cur,sizeof(double)*ndim*ndim);
             
@@ -206,16 +194,18 @@ public:
             // yi' * Bi * yi / p_sum
 
             double r_sum = 0;
+
             for(size_t i = 0; i < ndim; i++){
                 for(size_t j = 0; j < ndim;j ++){
                     yb[i] += Ym[j] * bm_prev[j*ndim + i];
                 }
             }
-            
+
             for(size_t i = 0; i < ndim; i++){
                 r_sum += yb[i]*Ym[i];
             }
             r_sum = (r_sum * p_sum + 1) * p_sum;
+
             for (size_t i = 0; i < ndim; i++) {
                 for (size_t j = 0; j < ndim; j++) {
                     V[i*ndim + j] = Sm[i]* Sm[j] * r_sum;
@@ -290,7 +280,6 @@ public:
 			iter_num++;
 		}
 		delete []V;
-		//model->set_weight(weight_model);
 		fprintf(stdout, "Ttrain Done in %d iter\n",iter_num);
 	}
 
@@ -304,35 +293,29 @@ public:
 
 private:
 	Softmax* model;
-	//data
 	size_t MaxIter;	
 	double lambda;
 	size_t ndim;
 	size_t iter_num;
 	std::vector<std::vector<double> > x_;
 	std::vector<int> y_;
-	//vector<double> y_predict;
 	double* weight_solver;
 	double* weight_model;
 	double* grad_solver;
 	double* grad_model;
 	double gradToler; // grad norm bound
 	double toler; // linesearch toler: cost_cur - cost_prev
-
 	std::vector<double> Sm;
 	std::vector<double> Ym;
 	std::vector<double> p;
 	double* bm_cur;  // size: (num_feature*(num_label+1) * num_feature*(num_label + 1))
 	double* bm_prev;
-	
 	double alpha;
 	double beta;
 
 	bool backtraking(){
-		
 		double cost_prev = model->cal_cost(x_,y_,weight_model);
 		double cost_cur = 0.0;
-        //fprintf(stdout, "cost_prev:%lf\n",cost_prev);
 		double tol = 9;
 		double t = 0.5;
 		size_t max_iter = 100;
@@ -349,18 +332,8 @@ private:
 		for (int i = 0; i < max_iter && tol > toler; ++i)
 		{
 			update_weight(t);
-            /*
-            for (size_t i = 0; i < ndim; i++) {
-                fprintf(stdout, "weight_solver[%d]:%lf\n",i,weight_solver[i]);
-            }*/
-           // getchar();
 			cost_cur = model->cal_cost(x_,y_,weight_solver);
-            //fprintf(stdout, "cost_cur:%lf\n",cost_cur);
-            //cout<<"getchar"<<endl;
-            //getchar();
-
-
-			// cost_cur < cost_prev - c * t
+			// cost_cur < cost_prev - alpha  * m  where m = grad'*p
 			if(cost_cur < (cost_prev + alpha * t)) {
 				fprintf(stdout, "Linesearch Succused: %d iter, %lf obj_val\n", iter_num, cost_cur);
 				return true;
@@ -370,7 +343,6 @@ private:
 				t *= beta;
 			}
 		}
-		
 		fprintf(stdout, "Linesearch Failed:  %d iter, %lf obj_val\n",iter_num, cost_cur);
         for (size_t i = 0; i < ndim; i++) {
             fprintf(stdout, "weight_solver[%d]:%lf\n",i,weight_solver[i]);
@@ -403,11 +375,7 @@ private:
 		{
 			weight_solver[i] = weight_model[i] + t * p[i];	
 		}
-	
-    
     }
-	
-
 }; //bfgs done
 
 
